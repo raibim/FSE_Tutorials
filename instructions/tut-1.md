@@ -40,6 +40,11 @@ Git is a version control system that allows you to track changes in your code an
    ```bash
    git clone https://github.com/your-username/FSE_Tutorials.git
    ```
+6. Navigate to the cloned repository and check out the `tut-1` branch:
+   ```bash
+   cd FSE_Tutorials
+   git checkout tut-1
+   ```
 
 
 ### Step 4: Open the Project in VSCode  
@@ -67,7 +72,7 @@ Git is a version control system that allows you to track changes in your code an
     ```
 5. Push your changes to your forked repository on GitHub:
    ```bash
-   git push origin main
+   git push origin tut-1
    ```
 Congratulations! You have successfully set up your development environment for the _Wealth-Wise_ Dashboard project. You are now ready to proceed to Tutorial 2, where we will start building the core functionality of the application.
 
