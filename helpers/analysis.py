@@ -85,7 +85,6 @@ def create_unified_dataframe() -> pd.DataFrame:
 
 
 
-#TODO Complete the function below
 def generate_text_report():
     """Generates a text-based financial report."""
     df = create_unified_dataframe()
@@ -93,39 +92,26 @@ def generate_text_report():
     df['amount'] = pd.to_numeric(df['amount'])
     df['date'] = pd.to_datetime(df['date'])
 
-    #TODO Get an object called expenses by using df[df['amount'] < 0], and income by using df[df['amount'] > 0]
+    expenses = df[df['amount'] < 0]
+    income = df[df['amount'] > 0]
+    
+    total_spent = abs(expenses['amount'].sum())
+    total_earned = income['amount'].sum()
 
-    # Once you have those two objects, complete the following calculations, uncomment them!
-    # total_spent = abs(expenses['amount'].sum())
-    # total_earned = income['amount'].sum()
+    days_in_period = (df['date'].max() - df['date'].min()).days or 1
+    daily_burn = total_spent / days_in_period
 
-    # 2. Average Spend! Calculate how much we have spent in total, and divide it by the number of days in the period.
-    # NOTE: I have given you the code to calculate days_in_period, you just need to calculate daily_burn.
-    # HINT: For the data we have, the daily burn should be about R 615.41
-    #Uncomment the lines below once you have the total spent and earned variables
-    # days_in_period = (df['date'].max() - df['date'].min()).days or 1
-    # daily_burn = ?
+    dining_out = abs(df[df['category'] == 'Dining Out']['amount'].sum())
+    dining_pct = (dining_out / total_spent) * 100 if total_spent > 0 else 0
 
-    # 3. Category Breakdown by percentage for the category 'Dining Out'
-    # dining_out = abs(df[df['category'] == 'Dining Out']['amount'].sum())
-    #NOTE: Dining out percentage is how much we spent on dining out as a percentage of our total spending.
-    # HINT: For the data we have, the dining out percentage should be about 1.9%
-    # dining_pct = ?
-
-    # 4. Essential Coverage Ratio: How well does your income from 'Job' cover essential expenses like 'Housing' and 'Utilities'?
-
-    # This would be your job income over your essential expenses, if you have any essentials.
-    #NOTE: I have given you the code to calculate essentials, you just need to calculate job_income and coverage_ratio.
-    # essentials = abs(df[df['category'].isin(['Housing', 'Utilities'])]['amount'].sum())
-
-    # job_income = ?
-    # coverage_ratio = ?
+    essentials = abs(df[df['category'].isin(['Housing', 'Utilities'])]['amount'].sum())
+    job_income = income[income['category'] == 'Job']['amount'].sum()
+    coverage_ratio = job_income / essentials if essentials > 0 else 0
 
     # Output Report
-    #NOTE: Please uncomment the return statement below once you have all the variables calculated and properly assigned.
-    # return {
-    #     "Daily Burn Rate": f"R {daily_burn:.2f}",
-    #     "Dining Out %": f"{dining_pct:.1f}%",
-    #     "Essential Coverage": "Healthy" if coverage_ratio >= 2 else "Tight",
-    #     "Net Savings": f"R {total_earned - total_spent:.2f}"
-    # }
+    return {
+        "Daily Burn Rate": f"R {daily_burn:.2f}",
+        "Dining Out %": f"{dining_pct:.1f}%",
+        "Essential Coverage": "Healthy" if coverage_ratio >= 2 else "Tight",
+        "Net Savings": f"R {total_earned - total_spent:.2f}"
+    }

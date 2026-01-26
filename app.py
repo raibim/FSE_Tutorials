@@ -1,56 +1,47 @@
+import os
 from datetime import datetime
 from decimal import Decimal
 
-from helpers.transactions import Transaction, Category, calculate_financial_summary
+from flask import Flask, jsonify, request
+
+from customer_front.customer import customer_bp
 from data.database import get_session
 from helpers.analysis import generate_financial_charts, generate_text_report
+from helpers.transactions import Category, Transaction
 
 
+app = Flask(__name__)
+app.register_blueprint(customer_bp, url_prefix="/")
 
-def main():
-    # Initialize database and create tables
-    # Get a session
-    session = get_session()
-
-    try:
-        # Ensure transaction table exists by querying it
-        session.query(Transaction).first()
-
-        # Query all transactions from the database
-        all_transactions = session.query(Transaction).all()
-
-        # Calculate and display summary
-        summary = calculate_financial_summary(all_transactions)
-        print("Financial Summary:")
-        for key, value in summary.items():
-            print(f"{key.replace('_', ' ').title()}: {value}")
-    except Exception as e:
-        print(f"You may need to seed the database first, run 'python seed.py' and try again.\n\n")
-        raise e
-
-    finally:
-        session.close()
-        display_transactions_by_category("Job")
-        display_transactions_by_category("Groceries")
-        generate_financial_charts()
-        print("\nText-based Financial Report:\n")
-        print(generate_text_report())
+#TODO Complete the API endpoint below
+#NOTE You should use jsonify to return the report from generate_text_report()
+@app.route("/api/financial_summary", methods=["GET"])
+def api_financial_summary():
+    """API endpoint to get the student-facing text report."""
+    return ""
 
 
-# This function should group and display transactions by category, so we can see like Income - 3 transactions, Expense - 2 transactions, etc.
-def display_transactions_by_category(category_name: str):
-    session = get_session()
-    try:
-        transactions = session.query(Transaction).filter_by(category=category_name).all()
-        if not transactions:
-            print(f"No transactions found in category '{category_name}'.")
-            return
-        print(f"\nTransactions in category '{category_name}':")
-        for t in transactions:
-            print(t)
-    finally:
-        session.close()
+#TODO Complete the API endpoint below to return transactions for a specific category
+#NOTE Accept a query parameter 'category' (e.g., /api/transactions?category=Groceries)
+#NOTE Query the database for transactions matching that category
+#NOTE Return a JSON list of transaction dictionaries with keys: id, date, description, amount, category
+#HINT You can use request.args.get('category') to get the query parameter
+@app.route("/api/transactions", methods=["GET"])
+def api_transactions_by_category():
+    """API endpoint to get transactions filtered by category."""
+    return ""
+
+
+@app.route("/api/financial_charts", methods=["GET"])
+def api_financial_charts():
+    """Optionally generate charts and return web-friendly paths."""
+    charts = generate_financial_charts()
+    web_paths = {}
+    for key, path in charts.items():
+        if path:
+            web_paths[key] = f"/static/{os.path.basename(path)}"
+    return jsonify(web_paths)
 
 
 if __name__ == "__main__":
-    main()
+    app.run(debug=True)

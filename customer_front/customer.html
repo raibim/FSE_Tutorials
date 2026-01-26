@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Financial Snapshot</title>
+	<link rel="stylesheet" href="/customer.css" />
+</head>
+<body>
+	<main class="layout">
+		<section class="header">
+			<div>
+				<p class="eyebrow">Student Demo</p>
+				<h1>Financial Summary</h1>
+				<p class="sub">Live data from your Flask API</p>
+			</div>
+			<button id="refresh" class="btn">Refresh Summary</button>
+		</section>
+
+		<section class="cards" id="summary-cards">
+			<article class="card">
+				<p class="label">Daily Burn Rate</p>
+				<p class="value" id="burn-rate">—</p>
+			</article>
+			<article class="card">
+				<p class="label">Dining Out %</p>
+				<p class="value" id="dining">—</p>
+			</article>
+			<article class="card">
+				<p class="label">Essential Coverage</p>
+				<p class="value" id="coverage">—</p>
+			</article>
+			<article class="card">
+				<p class="label">Net Savings</p>
+				<p class="value" id="savings">—</p>
+			</article>
+		</section>
+
+		<section class="charts">
+			<div class="charts__header">
+				<h2>Spending vs Income</h2>
+				<button id="load-charts" class="btn ghost">Load Charts</button>
+			</div>
+			<div class="charts__grid" id="chart-grid">
+				<p class="muted" id="chart-empty">Charts will appear here.</p>
+			</div>
+		</section>
+	</main>
+
+	<script>
+		const summaryUrl = '/api/financial_summary';
+		const chartsUrl = '/api/financial_charts';
+
+		async function fetchSummary() {
+			const cardMap = {
+				'Daily Burn Rate': document.getElementById('burn-rate'),
+				'Dining Out %': document.getElementById('dining'),
+				'Essential Coverage': document.getElementById('coverage'),
+				'Net Savings': document.getElementById('savings')
+			};
+			Object.values(cardMap).forEach(el => el.textContent = '…');
+			try {
+				const res = await fetch(summaryUrl);
+				if (!res.ok) throw new Error('Summary request failed');
+				const data = await res.json();
+				for (const [label, el] of Object.entries(cardMap)) {
+					el.textContent = data[label] ?? '—';
+				}
+			} catch (err) {
+				Object.values(cardMap).forEach(el => el.textContent = 'Error');
+				console.error(err);
+			}
+		}
+
+		async function fetchCharts() {
+			const container = document.getElementById('chart-grid');
+			const empty = document.getElementById('chart-empty');
+			empty.style.display = 'none';
+			container.innerHTML = '';
+			try {
+				const res = await fetch(chartsUrl);
+				if (!res.ok) throw new Error('Chart request failed');
+				const data = await res.json();
+				const entries = Object.entries(data);
+				if (!entries.length) {
+					empty.style.display = 'block';
+					empty.textContent = 'No chart data available yet.';
+					return;
+				}
+				for (const [label, src] of entries) {
+					const card = document.createElement('article');
+					card.className = 'chart-card';
+					const title = document.createElement('p');
+					title.className = 'label';
+					title.textContent = label.charAt(0).toUpperCase() + label.slice(1);
+					const img = document.createElement('img');
+					img.src = src;
+					img.alt = `${label} chart`;
+					card.appendChild(title);
+					card.appendChild(img);
+					container.appendChild(card);
+				}
+			} catch (err) {
+				empty.style.display = 'block';
+				empty.textContent = 'Unable to load charts.';
+				console.error(err);
+			}
+		}
+
+		document.getElementById('refresh').addEventListener('click', fetchSummary);
+		document.getElementById('load-charts').addEventListener('click', fetchCharts);
+		fetchSummary();
+	</script>
+</body>
+</html>

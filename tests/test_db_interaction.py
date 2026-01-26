@@ -5,7 +5,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 import data.database as database
-from app import display_transactions_by_category
 from helpers.transactions import Base, Category, Transaction
 
 
@@ -34,22 +33,4 @@ def session(session_factory):
 
 
 
-def test_display_transactions_by_category_outputs(capsys, session):
-	income = Category(name="Income")
-	session.add(income)
-	session.add(
-		Transaction(
-			date="2024-02-01",
-			description="Salary",
-			amount=Decimal("5000"),
-			category="Income",
-			category_ref=income,
-		)
-	)
-	session.commit()
 
-	display_transactions_by_category("Income")
-	captured = capsys.readouterr().out
-
-	assert "Transactions in category 'Income':" in captured
-	assert "Salary" in captured
