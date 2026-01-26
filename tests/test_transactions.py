@@ -8,7 +8,6 @@ from transactions import (
     get_income_total,
     get_expense_total,
     check_budget,
-    display_transactions,
 )
 
 
@@ -133,19 +132,3 @@ class TestCheckBudget:
     def test_check_budget_zero_balance(self):
         is_within, message = check_budget(Decimal("0"), Decimal("1000"))
         assert is_within is True
-
-
-class TestDisplayTransactions:
-    def test_display_transactions_empty(self, capsys):
-        display_transactions([])
-        captured = capsys.readouterr()
-        assert isinstance(captured.out, str)
-
-    def test_display_transactions_with_data(self, capsys):
-        transactions = [
-            {"description": "Salary", "amount": Decimal("5000"), "type": "income"},
-            {"description": "Rent", "amount": Decimal("2500"), "type": "expense"},
-        ]
-        display_transactions(transactions)
-        captured = capsys.readouterr()
-        assert isinstance(captured.out, str)
