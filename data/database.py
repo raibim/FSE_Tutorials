@@ -1,8 +1,8 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from transactions import Base
-from config import Config
+from helpers.transactions import Base
+from helpers.config import Config
 
 # Create SQLite database engine
 DATABASE_URL = Config.get_database_url()

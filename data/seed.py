@@ -1,8 +1,13 @@
+"""Seed script to populate the database with initial data.
+
+Run this script from the project root using:
+    python -m data.seed
+"""
 from datetime import datetime
 from decimal import Decimal
 
-from transactions import Transaction, Category
-from database import init_db, get_session
+from helpers.transactions import Transaction, Category
+from data.database import init_db, get_session
 
 
 def seed_database():

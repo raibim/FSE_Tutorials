@@ -277,7 +277,6 @@ Once all tests pass, commit your completed work:
 2. Stage your changes:
    ```bash
    git add config.py
-   git add .env
    git add transactions.py
    git add app.py
    git add tests/test_transaction_class.py

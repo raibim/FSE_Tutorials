@@ -2,7 +2,7 @@ from decimal import Decimal, InvalidOperation
 from sqlalchemy import Column, ForeignKey, Integer, Numeric, String
 from sqlalchemy.orm import declarative_base, relationship
 
-from config import Config
+from helpers.config import Config
 
 
 CURRENCY_SYMBOL = Config.get_currency_symbol()

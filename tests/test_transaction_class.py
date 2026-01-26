@@ -3,8 +3,8 @@ from decimal import Decimal
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-import database
-from transactions import (
+import data.database as database
+from helpers.transactions import (
     Transaction,
     format_currency,
     calculate_total_expenses,

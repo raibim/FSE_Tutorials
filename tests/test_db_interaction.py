@@ -4,9 +4,9 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-import database
+import data.database as database
 from app import add_expense_category, add_expenses, display_transactions_by_category
-from transactions import Base, Category, Transaction
+from helpers.transactions import Base, Category, Transaction
 
 
 @pytest.fixture()

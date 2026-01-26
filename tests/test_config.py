@@ -1,7 +1,7 @@
 import pytest
 
 # Just check if the student has loaded the environment variables correctly
-from config import Config
+from helpers.config import Config
 
 def test_currency_symbol():
     assert Config.get_currency_symbol() == "R"
