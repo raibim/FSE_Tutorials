@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Financial Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}" />
 </head>
+
 <body>
     <div class="container">
         <header class="hero">
@@ -18,16 +20,16 @@
 
         <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="alerts">
-                    {% for category, message in messages %}
-                        <div class="alert alert--{{ category }}">
-                            <span class="alert__icon">{% if category == 'success' %}✓{% else %}!{% endif %}</span>
-                            <p>{{ message }}</p>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
+        {% if messages %}
+        <div class="alerts">
+            {% for category, message in messages %}
+            <div class="alert alert--{{ category }}">
+                <span class="alert__icon">{% if category == 'success' %}✓{% else %}!{% endif %}</span>
+                <p>{{ message }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
         {% endwith %}
 
         <!-- Financial Summary Cards -->
@@ -60,31 +62,31 @@
                     <p class="metric-card__value">{{ report['Net Savings'] }}</p>
                 </div>
             </article>
-            
-            <!-- TODO: Add a new metric card for "Largest Expense" -->
-            <!-- HINT: Use the same structure as above with metric-card class -->
-            <!-- HINT: Choose an appropriate emoji icon (💸, 🔴, or ⚠️ work well) -->
-            <!-- HINT: Display largest_expense.description and largest_expense.amount if largest_expense exists -->
-            <!-- HINT: Format amount as: R {{ "%.2f"|format(largest_expense.amount|abs) }} -->
-            <!-- EXAMPLE STRUCTURE:
+
+
             <article class="metric-card">
-                <div class="metric-card__icon">YOUR_EMOJI_HERE</div>
+                <div class="metric-card__icon">💸</div>
                 <div class="metric-card__content">
                     <p class="metric-card__label">Largest Expense</p>
                     <p class="metric-card__value">
                         {% if largest_expense %}
-                            YOUR_FORMATTED_AMOUNT_HERE
+                        R {{ "%.2f"|format(largest_expense.amount|abs) }} - {{ largest_expense.description }}
                         {% else %}
-                            No expenses yet
+                        No expenses yet
                         {% endif %}
                     </p>
                 </div>
             </article>
-            -->
-            
-            <!-- TODO: Add a new metric card for "Average Transaction" -->
-            <!-- HINT: Display avg_transaction formatted as currency: R {{ "%.2f"|format(avg_transaction) }} -->
-            
+
+            <article class="metric-card">
+                <div class="metric-card__icon">📊</div>
+                <div class="metric-card__content">
+                    <p class="metric-card__label">Average Transaction</p>
+                    <p class="metric-card__value">
+                        R {{ "%.2f"|format(avg_transaction) }}
+                    </p>
+                </div>
+            </article>
         </section>
 
         <!-- Charts Section -->
@@ -92,16 +94,16 @@
             <h2 class="section-title">Spending Analysis</h2>
             <div class="charts-grid">
                 {% if chart_paths.expenses %}
-                    <div class="chart-container">
-                        <h3>Expenses Breakdown</h3>
-                        <img src="{{ chart_paths.expenses }}" alt="Expenses Chart" class="chart-image" />
-                    </div>
+                <div class="chart-container">
+                    <h3>Expenses Breakdown</h3>
+                    <img src="{{ chart_paths.expenses }}" alt="Expenses Chart" class="chart-image" />
+                </div>
                 {% endif %}
                 {% if chart_paths.income %}
-                    <div class="chart-container">
-                        <h3>Income Sources</h3>
-                        <img src="{{ chart_paths.income }}" alt="Income Chart" class="chart-image" />
-                    </div>
+                <div class="chart-container">
+                    <h3>Income Sources</h3>
+                    <img src="{{ chart_paths.income }}" alt="Income Chart" class="chart-image" />
+                </div>
                 {% endif %}
             </div>
         </section>
@@ -117,7 +119,8 @@
                     </div>
                     <div class="form-group">
                         <label for="description">Description</label>
-                        <input type="text" id="description" name="description" placeholder="e.g., Grocery shopping" required />
+                        <input type="text" id="description" name="description" placeholder="e.g., Grocery shopping"
+                            required />
                     </div>
                     <div class="form-group">
                         <label for="transaction_type">Type</label>
@@ -191,8 +194,10 @@
                             <td>{{ transaction.date[:10] }}</td>
                             <td>{{ transaction.description }}</td>
                             <td><span class="category-badge">{{ transaction.category }}</span></td>
-                            <td class="amount {% if transaction.amount > 0 %}amount--positive{% else %}amount--negative{% endif %}">
-                                {% if transaction.amount > 0 %}+{% else %}-{% endif %} R {{ "%.2f"|format(transaction.amount|abs) }}
+                            <td
+                                class="amount {% if transaction.amount > 0 %}amount--positive{% else %}amount--negative{% endif %}">
+                                {% if transaction.amount > 0 %}+{% else %}-{% endif %} R {{
+                                "%.2f"|format(transaction.amount|abs) }}
                             </td>
                         </tr>
                         {% endfor %}
@@ -215,10 +220,10 @@
             rows.forEach(row => {
                 const text = row.textContent.toLowerCase();
                 const category = row.dataset.category;
-                
+
                 const matchesSearch = text.includes(searchTerm);
                 const matchesCategory = !categoryFilter || category === categoryFilter;
-                
+
                 row.style.display = (matchesSearch && matchesCategory) ? '' : 'none';
             });
         }
@@ -230,4 +235,5 @@
         dateInput.value = now.toISOString().slice(0, 16);
     </script>
 </body>
+
 </html>

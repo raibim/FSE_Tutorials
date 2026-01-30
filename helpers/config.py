@@ -4,7 +4,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-# TODO: Load SECRET_KEY and CURRENCY_SYMBOL from environment variables using python-dotenv
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey")
     CURRENCY_SYMBOL = os.getenv("CURRENCY_SYMBOL", "R")

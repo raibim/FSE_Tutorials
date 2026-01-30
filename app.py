@@ -33,13 +33,14 @@ def dashboard():
             if path:
                 chart_paths[key] = f"/static/{os.path.basename(path)}"
         
-        #TODO: Calculate additional metrics for dashboard cards
-        #HINT: Query transactions to find the largest single expense (most negative amount)
-        #HINT: Use session.query(Transaction).filter(Transaction.amount < 0).order_by(Transaction.amount).first()
-        #HINT: Calculate average transaction size using all transactions
-        #NOTE: Pass these as 'largest_expense' and 'avg_transaction' to the template
-        largest_expense = transactions[0]  # Placeholder
-        avg_transaction = 0 # Placeholder
+        largest_expense = session.query(Transaction).filter(Transaction.amount < 0).order_by(Transaction.amount).first()
+        avg_transaction = session.query(Transaction).with_entities(
+            (Transaction.amount).label('amount')
+        ).all()
+        if avg_transaction:
+            avg_transaction = sum([t.amount for t in avg_transaction]) / len(avg_transaction)
+        else:
+            avg_transaction = 0
         
         return render_template(
             'dashboard.html',
