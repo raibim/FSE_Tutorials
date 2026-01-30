@@ -14,3 +14,8 @@ env/
 
 # Charts
 *.png
+
+# Celery    
+celerybeat-schedule
+
+.env
