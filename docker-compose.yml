@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  # Redis service for Celery message broker
+  redis:
+    image: redis:7-alpine
+    container_name: fse_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Main Flask web application
+  web:
+    build: .
+    container_name: fse_web
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=True
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - .:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: python -u app.py
+    restart: unless-stopped
+
+  # Celery worker service (can be scaled by running multiple instances)
+  celery_worker:
+    build: .
+    container_name: fse_celery_worker
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - FLASK_ENV=development
+    volumes:
+      - .:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: celery -A app.celery worker --loglevel=info
+    restart: unless-stopped
+
+  # Celery beat scheduler (for periodic tasks)
+  celery_beat:
+    build: .
+    container_name: fse_celery_beat
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - FLASK_ENV=development
+    volumes:
+      - .:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: celery -A app.celery beat --loglevel=info
+    restart: unless-stopped
+
+volumes:
+  redis_data:

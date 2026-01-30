@@ -7,11 +7,12 @@ from customer_front.customer import customer_bp
 from data.database import get_session
 from helpers.analysis import generate_financial_charts, generate_text_report
 from helpers.transactions import Category, Transaction
+from helpers.config import Config
 
 
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here-change-in-production'
+app.secret_key = Config.get_secret_key()
 app.register_blueprint(customer_bp, url_prefix="/customer")
 
 
@@ -151,4 +152,4 @@ def api_financial_charts():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=Config.get_debug_mode())

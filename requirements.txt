@@ -4,3 +4,5 @@ matplotlib
 pytest
 python-dotenv
 sqlalchemy
+celery
+redis
