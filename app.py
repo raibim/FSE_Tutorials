@@ -8,7 +8,11 @@ from data.database import get_session
 from helpers.analysis import generate_financial_charts, generate_text_report
 from helpers.transactions import Transaction
 from helpers.config import Config
-from tasks import generate_charts_task, cleanup_old_charts_task
+from tasks import (
+    generate_charts_task,
+    cleanup_old_charts_task,
+    log_transaction_audit_task,
+)
 
 app = Flask(__name__)
 app.secret_key = Config.get_secret_key()
@@ -113,13 +117,13 @@ def add_transaction():
             category=category,
         )
 
-        # TODO: Add your log transaction audit task here!
-        # log_transaction_audit_task.delay(new_transaction.id) # type: ignore
-
-        cleanup_old_charts_task.delay()  # type: ignore
-
         session.add(new_transaction)
         session.commit()
+
+        # TODO: Add your log transaction audit task here!
+        #log_transaction_audit_task.delay(new_transaction.id)  # type: ignore
+
+        cleanup_old_charts_task.delay()  # type: ignore
 
         flash("Transaction added successfully!", "success")
     except Exception as e:

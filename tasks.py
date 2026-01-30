@@ -1,5 +1,7 @@
 import os
 from celery import Celery
+from data.database import get_session
+from helpers.transactions import Transaction
 from helpers.analysis import generate_financial_charts
 from helpers.config import Config
 import time
@@ -59,3 +61,30 @@ def cleanup_old_charts_task():
                 print(f"Deleted old chart file: {file_path}")
             except Exception as e:
                 print(f"Error deleting file {file_path}: {str(e)}")
+
+
+# TODO: Implement the function below to log a transaction
+# Remember to get the session, query the transaction by ID, and then call the log_transaction_audit helper function
+# If the transaction is not found, print an error message: "Transaction with ID {transaction_id} not found for audit logging."
+@celery.task(name="log_transaction_audit_task")
+def log_transaction_audit_task(transaction_id: int):
+    """Celery task to log transaction audit information."""
+    session = get_session()
+    try:
+        pass
+    finally:
+        session.close()
+
+
+def log_transaction_audit(transaction: Transaction):
+    """Helper function to log transaction audit information."""
+    # Log to a file named 'transaction_audit.log'
+    with open("transaction_audit.log", "a") as log_file:
+        log_entry = (
+            f"Transaction ID: {transaction.id}, "
+            f"Date: {transaction.date}, "
+            f"Description: {transaction.description}, "
+            f"Amount: {transaction.amount}, "
+            f"Category: {transaction.category}\n"
+        )
+        log_file.write(log_entry)
