@@ -72,6 +72,25 @@ During this course, students will learn about software development methodologies
 
 **Key Concepts: GitHub Actions, YAML configuration, and versioning.**
 
+### Tutorial 10: Asynchronous Tasks with Celery
+- Enhance your application with background processing.
+- Use Celery to offload time-consuming tasks, such as generating reports or sending email notifications, to improve the responsiveness of your application.
+
+**Key Concepts: Task queues, brokers (e.g., Redis), and asynchronous programming.**
+
+### Tutorial 11: Deployment & Cloud Hosting
+- Deploy your application to the cloud.
+- Learn to use platforms like Render or Heroku to host your Flask application, making it accessible from anywhere.
+
+**Key Concepts: Deployment pipelines, environment variables in production, and cloud services.**
+
+### Tutorial 12: Introduction to Vibe Coding with Claude
+- Explore the emerging field of AI-assisted coding.
+- Learn how to leverage AI tools like Claude to enhance your coding efficiency and problem-solving skills.
+
+**Key Concepts: AI-assisted coding, prompt engineering, and ethical considerations.**
+
+
 ## Branching Strategy
 To maintain a clean and organized codebase, we will use the following branching strategy:
 - `main`: The stable branch containing the latest production-ready code.
