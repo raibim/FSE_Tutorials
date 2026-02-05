@@ -11,13 +11,13 @@ class Config:
     DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///finance.db")
 
     @classmethod
-    def get_currency_symbol(cls : type) -> str:
+    def get_currency_symbol(cls: type) -> str:
         return cls.CURRENCY_SYMBOL
-    
+
     @classmethod
-    def get_secret_key(cls : type) -> str:
+    def get_secret_key(cls: type) -> str:
         return cls.SECRET_KEY
-    
+
     @classmethod
-    def get_database_url(cls : type) -> str:
+    def get_database_url(cls: type) -> str:
         return cls.DATABASE_URL

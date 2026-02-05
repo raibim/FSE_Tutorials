@@ -12,7 +12,6 @@ engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-
 def init_db():
     """Create all tables in the database."""
     Base.metadata.create_all(bind=engine)

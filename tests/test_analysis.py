@@ -1,62 +1,70 @@
 import pytest
-from unittest.mock import patch
-import pandas as pd
+from decimal import Decimal
 from helpers.analysis import generate_text_report
+from helpers.transactions import Transaction, Category
 
 @pytest.fixture
-def mock_dataframe():
-    """Returns a DataFrame populated with 2 months of financial data."""
-    data = [
-        {"date": "2026-01-25T14:36:28", "description": "Monthly Salary", "amount": 35000.00, "category": "Job"},
-        {"date": "2026-01-23T14:36:28", "description": "Pick n Pay Groceries", "amount": -1250.50, "category": "Groceries"},
-        {"date": "2026-01-21T14:36:28", "description": "Rent Payment", "amount": -12000.00, "category": "Housing"},
-        {"date": "2026-01-16T14:36:28", "description": "Freelance Project: Web Design", "amount": 4500.00, "category": "Freelance"},
-        {"date": "2026-01-14T14:36:28", "description": "Electricity/Water Bill", "amount": -1850.00, "category": "Utilities"},
-        {"date": "2026-01-11T14:36:28", "description": "Netflix Subscription", "amount": -199.00, "category": "Entertainment"},
-        {"date": "2026-01-08T14:36:28", "description": "Petrol Station", "amount": -950.00, "category": "Transport"},
-        {"date": "2026-01-04T14:36:28", "description": "Dinner with Friends", "amount": -650.00, "category": "Dining Out"},
-        {"date": "2025-12-30T14:36:28", "description": "Year-End Bonus", "amount": 15000.00, "category": "Bonus"},
-        {"date": "2025-12-29T14:36:28", "description": "Monthly Salary", "amount": 35000.00, "category": "Job"},
-        {"date": "2025-12-25T14:36:28", "description": "Holiday Gift Shopping", "amount": -4200.00, "category": "Shopping"},
-        {"date": "2025-12-22T14:36:28", "description": "Rent Payment", "amount": -12000.00, "category": "Housing"},
-        {"date": "2025-12-17T14:36:28", "description": "Checkers Groceries", "amount": -1100.25, "category": "Groceries"},
-        {"date": "2025-12-12T14:36:28", "description": "Internet Fiber Line", "amount": -899.00, "category": "Utilities"},
-        {"date": "2025-12-07T14:36:28", "description": "Coffee Shop", "amount": -45.00, "category": "Dining Out"},
-        {"date": "2025-12-02T14:36:28", "description": "Gym Membership", "amount": -550.00, "category": "Health"},
-        {"date": "2025-11-28T14:36:28", "description": "Freelance Project: Logo", "amount": 2200.00, "category": "Freelance"}
+def rich_sample_data(db_session):
+    """Adds specific data to test all branches of the report logic."""
+    # Create required categories
+    cat_job = Category(name="Job")
+    cat_ent = Category(name="Entertainment")
+    cat_house = Category(name="Housing")
+    cat_util = Category(name="Utilities")
+    
+    db_session.add_all([cat_job, cat_ent, cat_house, cat_util])
+    db_session.commit()
+
+    # Add transactions to match your report logic requirements
+    txs = [
+        # Income
+        Transaction(date="2024-03-01", description="Salary", amount=Decimal("20000.00"), category_ref=cat_job),
+        # Expenses
+        Transaction(date="2024-03-01", description="Rent", amount=Decimal("-5000.00"), category_ref=cat_house),
+        # Daily burn over 10 days (approx)
+        Transaction(date="2024-03-11", description="Electricity", amount=Decimal("-1000.00"), category_ref=cat_util),
+        # Entertainment for % calc
+        Transaction(date="2024-03-05", description="Movie", amount=Decimal("-200.00"), category_ref=cat_ent),
     ]
     
-    df = pd.DataFrame(data)
-    
-    # Crucial for the tutorial: Ensure types are correct immediately
-    df['date'] = pd.to_datetime(df['date'])
-    # Using float here for simple pandas math, or Decimal if you want to be strict
-    df['amount'] = df['amount'].astype(float) 
-    
-    return df
+    db_session.add_all(txs)
+    db_session.commit()
+    return txs
 
-
-@pytest.fixture
-def expected_output():
-    """Expected output from generate_text_report."""
-    return {
-        'Daily Burn Rate': 'R 615.41',
-        'Dining Out %': '1.9%',
-        'Essential Coverage': 'Healthy',
-        'Net Savings': 'R 56006.25'
-    }
-
-
-@patch('helpers.analysis.create_unified_dataframe')
-def test_generate_text_report(mock_create_df, mock_dataframe, expected_output):
-    """Test generate_text_report returns expected output format."""
-    mock_create_df.return_value = mock_dataframe
+def test_generate_text_report_logic(db_session, rich_sample_data):
+    """Tests if the report calculates burn rate, percentages, and coverage correctly."""
     
-    result = generate_text_report()
+    # Act
+    report = generate_text_report()
+
+    # Assert - Structure
+    assert isinstance(report, dict)
+    expected_keys = ["Daily Burn Rate", "Entertainment %", "Essential Coverage", "Net Savings"]
+    for key in expected_keys:
+        assert key in report
+
+    # Assert - Content/Math Checks
+    # Total spent = 5000 + 1000 + 200 = 6200
+    # Days = (Mar 11 - Mar 1) = 10 days
+    # Daily Burn = 6200 / 10 = 620.00
+    assert "R 620.00" in report["Daily Burn Rate"]
     
-    assert isinstance(result, dict)
-    assert set(result.keys()) == set(expected_output.keys())
-    assert result['Daily Burn Rate'] == expected_output['Daily Burn Rate']
-    assert result['Dining Out %'] == expected_output['Dining Out %']
-    assert result['Essential Coverage'] == expected_output['Essential Coverage']
-    assert result['Net Savings'] == expected_output['Net Savings']
+    # Entertainment % = (200 / 6200) * 100 = ~3.2%
+    assert "3.2%" in report["Entertainment %"]
+    
+    # Essentials = 5000 + 1000 = 6000. Job = 20000. 
+    # Ratio = 20000 / 6000 = 3.33 (>= 2 is 'Healthy')
+    assert report["Essential Coverage"] == "Healthy"
+    
+    # Net Savings = 20000 - 6200 = 13800
+    assert "R 13800.00" in report["Net Savings"]
+
+def test_generate_text_report_empty_db(db_session):
+    """Ensures the report handles an empty database gracefully without crashing."""
+    # With no data, create_unified_dataframe returns empty DF
+    # We want to make sure the division-by-zero checks work
+    try:
+        report = generate_text_report()
+        assert report["Daily Burn Rate"] == "R 0.00"
+    except ZeroDivisionError:
+        pytest.fail("generate_text_report raised ZeroDivisionError on empty data!")

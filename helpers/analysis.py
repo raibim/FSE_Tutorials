@@ -1,4 +1,6 @@
+from decimal import Decimal
 import os
+from loguru import logger
 import matplotlib
 
 from data.database import get_session
@@ -7,7 +9,7 @@ from helpers.transactions import Category, Transaction
 matplotlib.use("Agg")  # Fixes potential backend issues
 import matplotlib.pyplot as plt
 import pandas as pd
-from sqlalchemy import func, cast, Float
+from sqlalchemy import func, cast, Float, select
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(CURRENT_DIR, "..", "static")
@@ -19,27 +21,34 @@ def generate_financial_charts():
     charts = {}
 
     try:
-        # 1. Query for Expenses (Amount < 0)
-        expense_results = (
-            session.query(
-                Transaction.category,  # Grouping by the string 'category' for more detail
-                func.abs(cast(func.sum(Transaction.amount), Float)).label("total"),
+        # 1. We can fetch all the categories since they are linked to transactions
+        stmt = select(Category).join(
+            Transaction
+        ).group_by(Category.id)
+        categories = session.execute(stmt).scalars().all()
+        if not categories:
+            logger.info("No categories with transactions found for chart generation.")
+            return charts
+        # Now we can filter our categories into expenses and income
+        # 1. Get the sum of negative amounts (expenses) grouped by category
+        expense_results = []
+        income_results = []
+        for category in categories:
+            total_expense = sum(
+                Decimal(str(t.amount))
+                for t in category.transactions
+                if Decimal(str(t.amount)) < 0
             )
-            .filter(Transaction.amount < 0)
-            .group_by(Transaction.category)
-            .all()
-        )
+            total_income = sum(
+                Decimal(str(t.amount))
+                for t in category.transactions
+                if Decimal(str(t.amount)) > 0
+            )
+            if total_expense < 0:
+                expense_results.append((category.name, float(abs(total_expense))))
+            if total_income > 0:
+                income_results.append((category.name, float(total_income)))
 
-        # 2. Query for Income (Amount > 0)
-        income_results = (
-            session.query(
-                Transaction.category,
-                cast(func.sum(Transaction.amount), Float).label("total"),
-            )
-            .filter(Transaction.amount > 0)
-            .group_by(Transaction.category)
-            .all()
-        )
         charts["expenses"] = create_pie(
             expense_results, "Expenses by Category", "expenses_pie.png"
         )
@@ -53,7 +62,7 @@ def generate_financial_charts():
 
 def create_pie(data, title, filename):
     if not data:
-        print(f"No data found for {title}.")
+        logger.warning(f"No data available to create pie chart: {title}")
         return None
 
     df = pd.DataFrame(data, columns=["label", "total"])
@@ -64,7 +73,7 @@ def create_pie(data, title, filename):
     path = os.path.join(STATIC_DIR, filename)
     plt.savefig(path)
     plt.close()
-    print(f"Saved: {path}")
+    logger.success(f"Saved: {path}")
     return path
 
 
@@ -72,28 +81,48 @@ def create_unified_dataframe() -> pd.DataFrame:
     """Fetches all transactions and returns a unified DataFrame."""
     session = get_session()
     try:
-        results = session.query(
-            Transaction.date,
-            Transaction.description,
-            Transaction.amount,
-            Transaction.category,
-        ).all()
-        df = pd.DataFrame(results, columns=["date", "description", "amount", "category"])
+        stmt = select(Category).join(
+            Transaction
+        ).group_by(Category.id)
+        categories = session.execute(stmt).scalars().all()
+
+        if not categories:
+            logger.info("No categories with transactions found for DataFrame creation.")
+            return pd.DataFrame(columns=["date", "description", "amount", "category"])
+
+        # Now we have all categories with their transactions, we can build the DataFrame
+        results = []
+        for category in categories:
+            for t in category.transactions:
+                results.append(
+                    (t.date, t.description, t.amount, category.name)
+                )
+        df = pd.DataFrame(
+            results, columns=["date", "description", "amount", "category"]
+        )
         return df
     finally:
         session.close()
 
 
-
-#TODO Complete the function below
-def generate_text_report():
+# TODO Complete the function below
+def generate_text_report() -> dict:
     """Generates a text-based financial report."""
     df = create_unified_dataframe()
+    if df.empty:
+        return {
+            "Daily Burn Rate": "R 0.00",
+            "Dining Out %": "0.0%",
+            "Essential Coverage": "No data",
+            "Net Savings": "R 0.00"
+        }
     # Ensure amount is numeric and date is datetime
-    df['amount'] = pd.to_numeric(df['amount'])
-    df['date'] = pd.to_datetime(df['date'])
+    df["amount"] = pd.to_numeric(df["amount"])
+    df["date"] = pd.to_datetime(df["date"])
 
-    #TODO Get an object called expenses by using df[df['amount'] < 0], and income by using df[df['amount'] > 0]
+    # TODO Get an object called expenses that contains only the expenses (negative amounts)
+    # TODO Get an object called income that contains only the income (positive amounts)
+
 
     # Once you have those two objects, complete the following calculations, uncomment them!
     # total_spent = abs(expenses['amount'].sum())
@@ -102,30 +131,43 @@ def generate_text_report():
     # 2. Average Spend! Calculate how much we have spent in total, and divide it by the number of days in the period.
     # NOTE: I have given you the code to calculate days_in_period, you just need to calculate daily_burn.
     # HINT: For the data we have, the daily burn should be about R 615.41
-    #Uncomment the lines below once you have the total spent and earned variables
+    # Uncomment the lines below once you have the total spent and earned variables
     # days_in_period = (df['date'].max() - df['date'].min()).days or 1
-    # daily_burn = ?
+    daily_burn = 0
 
-    # 3. Category Breakdown by percentage for the category 'Dining Out'
-    # dining_out = abs(df[df['category'] == 'Dining Out']['amount'].sum())
-    #NOTE: Dining out percentage is how much we spent on dining out as a percentage of our total spending.
-    # HINT: For the data we have, the dining out percentage should be about 1.9%
-    # dining_pct = ?
+    # 3. Category Breakdown by percentage for the category 'Entertainment''
+    # NOTE: Entertainment percentage is how much we spent on entertainment as a percentage of our total spending.
+    # entertainment_pct = (entertainment / total_spent) * 100 if total_spent > 0 else 0
 
     # 4. Essential Coverage Ratio: How well does your income from 'Job' cover essential expenses like 'Housing' and 'Utilities'?
+    # NOTE: I have given you the code to calculate essentials, you just need to calculate job_income and coverage_ratio.
 
-    # This would be your job income over your essential expenses, if you have any essentials.
-    #NOTE: I have given you the code to calculate essentials, you just need to calculate job_income and coverage_ratio.
     # essentials = abs(df[df['category'].isin(['Housing', 'Utilities'])]['amount'].sum())
-
-    # job_income = ?
-    # coverage_ratio = ?
+    # coverage_ratio = job_income / essentials if essentials > 0 else float('inf')
 
     # Output Report
-    #NOTE: Please uncomment the return statement below once you have all the variables calculated and properly assigned.
+    # NOTE: Please uncomment the return statement below once you have all the variables calculated and properly assigned.
     # return {
     #     "Daily Burn Rate": f"R {daily_burn:.2f}",
-    #     "Dining Out %": f"{dining_pct:.1f}%",
+    #     "Entertainment %": f"{entertainment_pct:.1f}%",
     #     "Essential Coverage": "Healthy" if coverage_ratio >= 2 else "Tight",
     #     "Net Savings": f"R {total_earned - total_spent:.2f}"
     # }
+
+    #TODO Delete the line below once you have completed the function
+    return {}
+
+
+def display_transactions_by_category(category_name: str):
+    session = get_session()
+    try:
+        stmt = select(Category).where(Category.name == category_name)
+        category = session.execute(stmt).scalars().first()
+        if not category or not category.transactions:
+            logger.info(f"No transactions found for category '{category_name}'.")
+            return
+        logger.info(f"Transactions for category '{category_name}':")
+        for t in category.transactions:
+            logger.info(t)
+    finally:
+        session.close()
