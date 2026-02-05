@@ -1,35 +1,52 @@
 import os
-from datetime import datetime
-from decimal import Decimal
-
+from loguru import logger
 from flask import Flask, jsonify, request
 
 from customer_front.customer import customer_bp
-from data.database import get_session
-from helpers.analysis import generate_financial_charts, generate_text_report
-from helpers.transactions import Category, Transaction
-
+from helpers.analysis import (
+    display_transactions_by_category,
+    generate_financial_charts,
+    generate_text_report,
+    get_category_names,
+    get_transactions_by_category
+)
 
 app = Flask(__name__)
 app.register_blueprint(customer_bp, url_prefix="/")
 
-#TODO Complete the API endpoint below
-#NOTE You should use jsonify to return the report from generate_text_report()
+
+def main():
+    logger.add("logs/app.log", rotation="1 MB")
+
+    display_transactions_by_category("Job")
+    display_transactions_by_category("Groceries")
+    generate_financial_charts()
+    logger.info("Financial Report:\n{}", generate_text_report())
+
+
+# TODO Complete the API endpoint below
+# NOTE You should use jsonify to return the report from generate_text_report()
 @app.route("/api/financial_summary", methods=["GET"])
 def api_financial_summary():
     """API endpoint to get the student-facing text report."""
     return ""
 
 
-#TODO Complete the API endpoint below to return transactions for a specific category
-#NOTE Accept a query parameter 'category' (e.g., /api/transactions?category=Groceries)
-#NOTE Query the database for transactions matching that category
-#NOTE Return a JSON list of transaction dictionaries with keys: id, date, description, amount, category
-#HINT You can use request.args.get('category') to get the query parameter
+# TODO Complete the API endpoint below to return transactions for a specific category
+# NOTE Accept a query parameter 'category' (e.g., /api/transactions?category=Groceries)
 @app.route("/api/transactions", methods=["GET"])
 def api_transactions_by_category():
     """API endpoint to get transactions filtered by category."""
+    category = request.args.get("category")
+    if not category:
+        return jsonify({"error": "Category query parameter is required"}), 400
     return ""
+
+
+@app.route("/api/category", methods=["GET"])
+def api_categories():
+    """API endpoint to get a list of all categories."""
+    return jsonify(get_category_names())
 
 
 @app.route("/api/financial_charts", methods=["GET"])

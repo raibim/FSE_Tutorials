@@ -88,15 +88,8 @@ You have **two endpoints** to implement in `app.py`:
 
 **Your task**:
 1. Get the `category` query parameter using `request.args.get('category')`
-2. Query the database for transactions matching that category
-3. Convert Transaction objects to dictionaries
-4. Return a JSON list
-
-**Hints**:
-- Use `get_session()` to get a database session
-- Query: `session.query(Transaction).filter_by(category=category_name).all()`
-- Convert each transaction to a dict: `{"id": t.id, "date": t.date, "description": t.description, "amount": str(t.amount), "category": t.category}`
-- Don't forget to close the session in a `finally` block!
+2. Complete the TODO inside of `helpers/analysis.py` to implement `get_transactions_by_category`. Make sure you use the helper function provided to convert the list of `Transaction` objects to dictionaries.
+3. Return the list of transactions as JSON using `jsonify()`
 
 ---
 
