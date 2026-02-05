@@ -1,16 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<title>Financial Snapshot</title>
 	<link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
 	<main class="layout">
 		<section class="header">
 			<div>
-				<p class="eyebrow">Student Demo</p>
+				<p class="eyebrow">Wealth-Wise</p>
 				<h1>Financial Summary</h1>
 				<p class="sub">Live data from your Flask API</p>
 			</div>
@@ -23,8 +25,8 @@
 				<p class="value" id="burn-rate">—</p>
 			</article>
 			<article class="card">
-				<p class="label">Dining Out %</p>
-				<p class="value" id="dining">—</p>
+				<p class="label">Entertainment %</p>
+				<p class="value" id="entertainment">—</p>
 			</article>
 			<article class="card">
 				<p class="label">Essential Coverage</p>
@@ -38,23 +40,53 @@
 
 		<section class="charts">
 			<div class="charts__header">
-				<h2>Spending vs Income</h2>
+				<h2>Expenses vs Income</h2>
 				<button id="load-charts" class="btn ghost">Load Charts</button>
 			</div>
 			<div class="charts__grid" id="chart-grid">
 				<p class="muted" id="chart-empty">Charts will appear here.</p>
 			</div>
 		</section>
+
+		<section class="transactions-container">
+			<div class="table-header">
+				<h2>Transactions</h2>
+				<div class="dropdown-wrapper">
+					<select class="category-selector" id="category-select">
+						<option value="" disabled selected>Filter by Category</option>
+					</select>
+				</div>
+			</div>
+
+			<table id="transactions-table" class="table__content">
+				<thead>
+					<tr>
+						<th>Date</th>
+						<th>Description</th>
+						<th style="text-align: right;">Amount</th>
+					</tr>
+				</thead>
+				<tbody id="transactions-body">
+					<tr>
+						<td colspan="3" class="muted" style="text-align: center; padding: 40px;">
+							Select a category to view transactions.
+						</td>
+					</tr>
+				</tbody>
+			</table>
+		</section>
+
 	</main>
 
 	<script>
 		const summaryUrl = '/api/financial_summary';
 		const chartsUrl = '/api/financial_charts';
-
+		const transactionsUrl = '/api/transactions';
+		const categoryUrl = '/api/category';
 		async function fetchSummary() {
 			const cardMap = {
 				'Daily Burn Rate': document.getElementById('burn-rate'),
-				'Dining Out %': document.getElementById('dining'),
+				'Entertainment %': document.getElementById('entertainment'),
 				'Essential Coverage': document.getElementById('coverage'),
 				'Net Savings': document.getElementById('savings')
 			};
@@ -107,9 +139,73 @@
 			}
 		}
 
+		async function fetchTransactions(category) {
+			try {
+				const res = await fetch(`${transactionsUrl}?category=${encodeURIComponent(category)}`);
+				if (!res.ok) throw new Error('Transactions request failed');
+				const data = await res.json();
+				console.log(`Transactions for ${category}:`, data);
+			} catch (err) {
+				console.error(err);
+				// Optionally display an error message in the UI
+				alert(`Failed to load transactions for category "${category}".`);
+			}
+
+		}
+
+		async function populateCategories() {
+			const select = document.getElementById('category-select');
+			try {
+				const res = await fetch(categoryUrl);
+				if (!res.ok) throw new Error('Category request failed');
+				const data = await res.json();
+				data.forEach(category => {
+					const option = document.createElement('option');
+					option.value = category;
+					option.textContent = category;
+					select.appendChild(option);
+				});
+			} catch (err) {
+				console.error(err);
+				select.disabled = true;
+			}
+		}
+
+		document.getElementById('category-select').addEventListener('change', async (e) => {
+			const category = e.target.value;
+			if (!category) return;
+			const tbody = document.getElementById('transactions-body');
+			tbody.innerHTML = '<tr><td colspan="3">Loading...</td></tr>';
+			const res = await fetch(`${transactionsUrl}?category=${encodeURIComponent(category)}`);
+			const data = await res.json();
+			tbody.innerHTML = data.map(tx => {
+				const isNegative = parseFloat(tx.amount) < 0;
+				const amountClass = isNegative ? 'amt-negative' : 'amt-positive';
+
+				return `
+        <tr>
+            <td>${new Date(tx.date).toLocaleDateString()}</td>
+            <td>${tx.description}</td>
+            <td style="text-align: right;" class="${amountClass}">
+                ${isNegative ? '' : '+'}${tx.amount}
+            </td>
+        </tr>
+    `;
+			}).join('') || '<tr><td colspan="3" class="muted">No transactions found.</td></tr>';
+		});
+
+
 		document.getElementById('refresh').addEventListener('click', fetchSummary);
 		document.getElementById('load-charts').addEventListener('click', fetchCharts);
+		document.getElementById('category-select').addEventListener('change', (e) => {
+			const category = e.target.value;
+			if (category) {
+				fetchTransactions(category);
+			}
+		});
 		fetchSummary();
+		populateCategories();
 	</script>
 </body>
+
 </html>

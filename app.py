@@ -1,62 +1,69 @@
-import os
-from datetime import datetime
 from decimal import Decimal
+import os
+import logging
+from loguru import logger
+from flask import Flask, jsonify, redirect, render_template, request, url_for, flash
 
-from flask import Flask, jsonify, request, render_template, redirect, url_for, flash
-from customer_front.customer import customer_bp
-from data.database import get_session
-from helpers.analysis import generate_financial_charts, generate_text_report
-from helpers.transactions import Category, Transaction
+from helpers.analysis import (
+    add_transaction_to_db,
+    display_transactions_by_category,
+    generate_financial_charts,
+    generate_text_report,
+    get_category_names,
+    get_transactions_by_category,
+    get_all_transactions,
+    get_largest_expense,
+    get_average_transaction_amount,
+)
+from helpers.config import Config, create_app
 
 
+# FLASK APP SETUP
+app = create_app(__name__)
 
-app = Flask(__name__)
-app.secret_key = 'your-secret-key-here-change-in-production'
-app.register_blueprint(customer_bp, url_prefix="/customer")
+def main():
+    logger.add("logs/app.log", rotation="1 MB")
 
+    display_transactions_by_category("Job")
+    display_transactions_by_category("Groceries")
+    generate_financial_charts()
+    logger.info("Financial Report:\n{}", generate_text_report())
+
+# FLASK APP
 
 @app.route("/")
 def dashboard():
     """Main dashboard with Jinja2 template."""
-    session = get_session()
-    try:
-        # Get all transactions
-        transactions = session.query(Transaction).order_by(Transaction.date.desc()).all()
+    # Get all transactions
+    transactions = get_all_transactions()
+    # Get financial report
+    report = generate_text_report()
+    # Generate charts and get paths
+    charts = generate_financial_charts()
+    chart_paths = {}
+    for key, path in charts.items():
+        if path:
+            chart_paths[key] = f"/static/{os.path.basename(path)}"
+    largest_expense = get_largest_expense()
+
+    avg_transaction = get_average_transaction_amount()
+
+    category_names = get_category_names()
         
-        # Get financial report
-        report = generate_text_report()
-        
-        # Generate charts and get paths
-        charts = generate_financial_charts()
-        chart_paths = {}
-        for key, path in charts.items():
-            if path:
-                chart_paths[key] = f"/static/{os.path.basename(path)}"
-        
-        #TODO: Calculate additional metrics for dashboard cards
-        #HINT: Query transactions to find the largest single expense (most negative amount)
-        #HINT: Use session.query(Transaction).filter(Transaction.amount < 0).order_by(Transaction.amount).first()
-        #HINT: Calculate average transaction size using all transactions
-        #NOTE: Pass these as 'largest_expense' and 'avg_transaction' to the template
-        largest_expense = transactions[0]  # Placeholder
-        avg_transaction = 0 # Placeholder
-        
-        return render_template(
+    return render_template(
             'dashboard.html',
             transactions=transactions,
             report=report,
             chart_paths=chart_paths,
             largest_expense=largest_expense,
-            avg_transaction=avg_transaction
+            avg_transaction=avg_transaction,
+            category_names=category_names,
         )
-    finally:
-        session.close()
 
 
 @app.route("/transaction/add", methods=["POST"])
 def add_transaction():
     """Handle adding a new transaction."""
-    session = get_session()
     try:
         # Extract form data
         date_str = request.form.get('date')
@@ -65,48 +72,40 @@ def add_transaction():
         category = request.form.get('category')
         transaction_type = request.form.get('transaction_type')
         
-        # Validate required fields
-        if not date_str:
-            raise ValueError("Date is required")
+        # Make amount negative for expenses
+        if transaction_type == 'expense' and amount > 0:
+            amount = -amount
         
-        # Make amount negative if it's an expense
-        if transaction_type == 'expense':
-            amount = -abs(amount)
-        else:
-            amount = abs(amount)
-        
-        # Parse date - handle both datetime-local format and ISO format with microseconds
-        try:
-            # Try datetime-local format first (YYYY-MM-DDTHH:MM)
-            parsed_date = datetime.strptime(date_str, "%Y-%m-%dT%H:%M")
-        except ValueError:
-            try:
-                # Try with seconds (YYYY-MM-DDTHH:MM:SS)
-                parsed_date = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S")
-            except ValueError:
-                # Try with microseconds (YYYY-MM-DDTHH:MM:SS.ffffff)
-                parsed_date = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S.%f")
-        
-        # Create new transaction
-        new_transaction = Transaction(
-            date=parsed_date.isoformat(),
-            description=description,
-            amount=amount,
-            category=category
-        )
-        
-        session.add(new_transaction)
-        session.commit()
-        
+        add_transaction_to_db(date=date_str, description=description, amount=amount, category_name=category)
         flash('Transaction added successfully!', 'success')
     except Exception as e:
-        session.rollback()
+        logger.error(f"Error adding transaction: {e}")
         flash(f'Error adding transaction: {str(e)}', 'error')
-    finally:
-        session.close()
     
     return redirect(url_for('dashboard'))
 
+
+@app.route("/category/add", methods=["POST"])
+def add_category():
+    """Handle adding a new category."""
+    try:
+        category_name = request.form.get('category_name', '').strip()
+        
+        if not category_name:
+            flash('Category name cannot be empty', 'error')
+        else:
+            from helpers.analysis import add_category_to_db
+            add_category_to_db(category_name)
+            flash(f'Category "{category_name}" added successfully!', 'success')
+    except Exception as e:
+        logger.error(f"Error adding category: {e}")
+        flash(f'Error adding category: {str(e)}', 'error')
+    
+    return redirect(url_for('dashboard'))
+
+
+    
+# API ENDPOINTS
 
 @app.route("/api/financial_summary", methods=["GET"])
 def api_financial_summary():
@@ -119,23 +118,14 @@ def api_transactions_by_category():
     """API endpoint to get transactions filtered by category."""
     category = request.args.get("category")
     if not category:
-        return jsonify([])  # Return empty list if no category provided
-    session = get_session()
-    try:
-        transactions = session.query(Transaction).filter_by(category=category).all()
-        result = [
-            {
-                "id": t.id,
-                "date": t.date,
-                "description": t.description,
-                "amount": t.amount,
-                "category": t.category,
-            }
-            for t in transactions
-        ]
-        return jsonify(result)
-    finally:
-        session.close()
+        return jsonify({"error": "Category query parameter is required"}), 400
+    return jsonify(get_transactions_by_category(category))
+
+
+@app.route("/api/category", methods=["GET"])
+def api_categories():
+    """API endpoint to get a list of all categories."""
+    return jsonify(get_category_names())
 
 
 @app.route("/api/financial_charts", methods=["GET"])

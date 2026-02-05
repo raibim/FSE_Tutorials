@@ -56,6 +56,7 @@ Both variables are already passed to `render_template`; just compute them.
 
 ### Step 4: Build the New Metric Cards (templates/dashboard.html)
 Find the TODO comments in the metrics section. Add two cards using the same structure/classes as the existing cards:
+This is **totally optional** and you will not be expected to know HTML / CSS for this course. The main point is to see how Jinja2 expressions work in a real template.
 
 - **Largest Expense** card
 	- Icon suggestion: 💸, 🔴, or ⚠️.

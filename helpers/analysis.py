@@ -1,4 +1,6 @@
+from decimal import Decimal
 import os
+from loguru import logger
 import matplotlib
 
 from data.database import get_session
@@ -7,7 +9,8 @@ from helpers.transactions import Category, Transaction
 matplotlib.use("Agg")  # Fixes potential backend issues
 import matplotlib.pyplot as plt
 import pandas as pd
-from sqlalchemy import func, cast, Float
+from sqlalchemy import func, cast, Float, select
+from sqlalchemy.orm import joinedload
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(CURRENT_DIR, "..", "static")
@@ -19,27 +22,32 @@ def generate_financial_charts():
     charts = {}
 
     try:
-        # 1. Query for Expenses (Amount < 0)
-        expense_results = (
-            session.query(
-                Transaction.category,  # Grouping by the string 'category' for more detail
-                func.abs(cast(func.sum(Transaction.amount), Float)).label("total"),
+        # 1. We can fetch all the categories since they are linked to transactions
+        stmt = select(Category).join(Transaction).group_by(Category.id)
+        categories = session.execute(stmt).scalars().all()
+        if not categories:
+            logger.info("No categories with transactions found for chart generation.")
+            return charts
+        # Now we can filter our categories into expenses and income
+        # 1. Get the sum of negative amounts (expenses) grouped by category
+        expense_results = []
+        income_results = []
+        for category in categories:
+            total_expense = sum(
+                Decimal(str(t.amount))
+                for t in category.transactions
+                if Decimal(str(t.amount)) < 0
             )
-            .filter(Transaction.amount < 0)
-            .group_by(Transaction.category)
-            .all()
-        )
+            total_income = sum(
+                Decimal(str(t.amount))
+                for t in category.transactions
+                if Decimal(str(t.amount)) > 0
+            )
+            if total_expense < 0:
+                expense_results.append((category.name, float(abs(total_expense))))
+            if total_income > 0:
+                income_results.append((category.name, float(total_income)))
 
-        # 2. Query for Income (Amount > 0)
-        income_results = (
-            session.query(
-                Transaction.category,
-                cast(func.sum(Transaction.amount), Float).label("total"),
-            )
-            .filter(Transaction.amount > 0)
-            .group_by(Transaction.category)
-            .all()
-        )
         charts["expenses"] = create_pie(
             expense_results, "Expenses by Category", "expenses_pie.png"
         )
@@ -53,7 +61,7 @@ def generate_financial_charts():
 
 def create_pie(data, title, filename):
     if not data:
-        print(f"No data found for {title}.")
+        logger.warning(f"No data available to create pie chart: {title}")
         return None
 
     df = pd.DataFrame(data, columns=["label", "total"])
@@ -64,7 +72,7 @@ def create_pie(data, title, filename):
     path = os.path.join(STATIC_DIR, filename)
     plt.savefig(path)
     plt.close()
-    print(f"Saved: {path}")
+    logger.success(f"Saved: {path}")
     return path
 
 
@@ -72,46 +80,174 @@ def create_unified_dataframe() -> pd.DataFrame:
     """Fetches all transactions and returns a unified DataFrame."""
     session = get_session()
     try:
-        results = session.query(
-            Transaction.date,
-            Transaction.description,
-            Transaction.amount,
-            Transaction.category,
-        ).all()
-        df = pd.DataFrame(results, columns=["date", "description", "amount", "category"])
+        stmt = select(Category).join(Transaction).group_by(Category.id)
+        categories = session.execute(stmt).scalars().all()
+
+        if not categories:
+            logger.info("No categories with transactions found for DataFrame creation.")
+            return pd.DataFrame(columns=["date", "description", "amount", "category"])
+
+        # Now we have all categories with their transactions, we can build the DataFrame
+        results = []
+        for category in categories:
+            for t in category.transactions:
+                results.append((t.date, t.description, t.amount, category.name))
+        df = pd.DataFrame(
+            results, columns=["date", "description", "amount", "category"]
+        )
         return df
     finally:
         session.close()
 
 
-
-def generate_text_report():
+def generate_text_report() -> dict:
     """Generates a text-based financial report."""
     df = create_unified_dataframe()
+    if df.empty:
+        return {
+            "Daily Burn Rate": "R 0.00",
+            "Entertainment %": "0.0%",
+            "Essential Coverage": "No data",
+            "Net Savings": "R 0.00",
+        }
     # Ensure amount is numeric and date is datetime
     df['amount'] = pd.to_numeric(df['amount'])
     df['date'] = pd.to_datetime(df['date'], format='ISO8601')  # Handle mixed ISO8601 formats
 
-    expenses = df[df['amount'] < 0]
-    income = df[df['amount'] > 0]
-    
-    total_spent = abs(expenses['amount'].sum())
-    total_earned = income['amount'].sum()
+    expenses = df[df["amount"] < 0]
+    income = df[df["amount"] > 0]
 
-    days_in_period = (df['date'].max() - df['date'].min()).days or 1
+    total_spent = abs(expenses["amount"].sum())
+    total_earned = income["amount"].sum()
+
+    days_in_period = (df["date"].max() - df["date"].min()).days or 1
     daily_burn = total_spent / days_in_period
 
-    dining_out = abs(df[df['category'] == 'Dining Out']['amount'].sum())
-    dining_pct = (dining_out / total_spent) * 100 if total_spent > 0 else 0
+    entertainment = abs(df[df["category"] == "Entertainment"]["amount"].sum())
+    entertainment_pct = (entertainment / total_spent) * 100 if total_spent > 0 else 0
 
-    essentials = abs(df[df['category'].isin(['Housing', 'Utilities'])]['amount'].sum())
-    job_income = income[income['category'] == 'Job']['amount'].sum()
+    essentials = abs(df[df["category"].isin(["Housing", "Utilities"])]["amount"].sum())
+    job_income = income[income["category"] == "Job"]["amount"].sum()
     coverage_ratio = job_income / essentials if essentials > 0 else 0
 
     # Output Report
     return {
         "Daily Burn Rate": f"R {daily_burn:.2f}",
-        "Dining Out %": f"{dining_pct:.1f}%",
+        "Entertainment %": f"{entertainment_pct:.1f}%",
         "Essential Coverage": "Healthy" if coverage_ratio >= 2 else "Tight",
-        "Net Savings": f"R {total_earned - total_spent:.2f}"
+        "Net Savings": f"R {total_earned - total_spent:.2f}",
     }
+
+
+def display_transactions_by_category(category_name: str):
+    session = get_session()
+    try:
+        stmt = select(Category).where(Category.name == category_name)
+        category = session.execute(stmt).scalars().first()
+        if not category or not category.transactions:
+            logger.info(f"No transactions found for category '{category_name}'.")
+            return
+        logger.info(f"Transactions for category '{category_name}':")
+        for t in category.transactions:
+            logger.info(t)
+    finally:
+        session.close()
+
+
+def get_category_names():
+    session = get_session()
+    try:
+        stmt = select(Category.name)
+        categories = session.execute(stmt).scalars().all()
+        return categories
+    finally:
+        session.close()
+
+
+def get_transactions_by_category(category_name: str):
+    """Fetches transactions for a specific category and returns them as a list of dictionaries."""
+    session = get_session()
+    try:
+        stmt = select(Category).where(Category.name == category_name)
+        category = session.execute(stmt).scalars().first()
+        if not category or not category.transactions:
+            logger.info(f"No transactions found for category '{category_name}'.")
+            return []
+        return convert_transactions_to_dict(category.transactions)
+    finally:
+        session.close()
+
+def convert_transactions_to_dict(transactions):
+    """Helper function to convert Transaction objects to dictionaries for JSON serialization."""
+    return [
+        {
+            "id": t.id,
+            "date": t.date,
+            "description": t.description,
+            "amount": str(t.amount),
+            "category": t.category_ref.name if t.category_ref else None,
+        }
+        for t in transactions
+    ]
+
+
+def add_transaction_to_db(date, description, amount, category_name):
+    """Adds a new transaction to the database."""
+    session = get_session()
+    try:
+        stmt = select(Category).where(Category.name == category_name)
+        category = session.execute(stmt).scalars().first()
+        if not category:
+            raise ValueError(f"Category '{category_name}' does not exist.")
+        new_transaction = Transaction(
+            date=date, description=description, amount=amount, category_id=category.id)
+        session.add(new_transaction)
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        session.close()
+
+
+def add_category_to_db(category_name):
+    """Adds a new category to the database."""
+    session = get_session()
+    try:
+        # Check if category already exists
+        stmt = select(Category).where(Category.name == category_name)
+        existing_category = session.execute(stmt).scalars().first()
+        if existing_category:
+            raise ValueError(f"Category '{category_name}' already exists.")
+        
+        new_category = Category(name=category_name)
+        session.add(new_category)
+        session.commit()
+        logger.info(f"Category '{category_name}' added successfully.")
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        session.close()
+
+
+def get_all_transactions():
+    """Fetches all transactions from the database, including their category names."""
+    session = get_session()
+    try:
+        stmt = select(Transaction).options(joinedload(Transaction.category_ref)).order_by(Transaction.date.desc())
+        transactions = session.execute(stmt).unique().scalars().all()
+        return transactions
+    finally:
+        session.close()
+
+
+#TODO Implement the following functions for the new metrics cards in the dashboard
+def get_largest_expense():
+    """Fetches the largest single expense (most negative amount)."""
+    pass
+
+#TODO Implement the following functions for the new metrics cards in the dashboard
+def get_average_transaction_amount():
+    """Calculates the average transaction amount using all transactions."""
+    pass

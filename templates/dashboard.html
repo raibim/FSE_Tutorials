@@ -40,10 +40,10 @@
                 </div>
             </article>
             <article class="metric-card">
-                <div class="metric-card__icon">🍽️</div>
+                <div class="metric-card__icon">🎉</div>
                 <div class="metric-card__content">
-                    <p class="metric-card__label">Dining Out</p>
-                    <p class="metric-card__value">{{ report['Dining Out %'] }}</p>
+                    <p class="metric-card__label">Entertainment %</p>
+                    <p class="metric-card__value">{{ report['Entertainment %'] }}</p>
                 </div>
             </article>
             <article class="metric-card">
@@ -120,36 +120,46 @@
                         <input type="text" id="description" name="description" placeholder="e.g., Grocery shopping" required />
                     </div>
                     <div class="form-group">
-                        <label for="transaction_type">Type</label>
-                        <select id="transaction_type" name="transaction_type" required>
-                            <option value="">Select Type</option>
-                            <option value="income">Income</option>
-                            <option value="expense">Expense</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
                         <label for="amount">Amount (R)</label>
                         <input type="number" id="amount" name="amount" step="0.01" placeholder="0.00" required />
                     </div>
+                    <script>
+                        const amountInput = document.getElementById('amount');
+                        amountInput.addEventListener('input', function() {
+                            if (this.value < 0) {
+                                this.style.color = '#EF4444';
+                            } else if (this.value > 0) {
+                                this.style.color = '#10B981';
+                            } else {
+                                this.style.color = '';
+                            }
+                        });
+                    </script>
                     <div class="form-group">
                         <label for="category">Category</label>
                         <select id="category" name="category" required>
                             <option value="">Select Category</option>
-                            <option value="Job">Job</option>
-                            <option value="Freelance">Freelance</option>
-                            <option value="Bonus">Bonus</option>
-                            <option value="Groceries">Groceries</option>
-                            <option value="Housing">Housing</option>
-                            <option value="Utilities">Utilities</option>
-                            <option value="Transport">Transport</option>
-                            <option value="Dining Out">Dining Out</option>
-                            <option value="Entertainment">Entertainment</option>
-                            <option value="Shopping">Shopping</option>
-                            <option value="Health">Health</option>
+                            {% for category in category_names %}
+                            <option value="{{ category }}">{{ category }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                 </div>
                 <button type="submit" class="btn-submit">Add Transaction</button>
+            </form>
+        </section>
+
+        <!-- Add Category Form -->
+        <section class="form-section">
+            <h2 class="section-title">Add New Category</h2>
+            <form method="POST" action="{{ url_for('add_category') }}" class="transaction-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="category_name">Category Name</label>
+                        <input type="text" id="category_name" name="category_name" placeholder="e.g., Travel, Subscriptions" required />
+                    </div>
+                </div>
+                <button type="submit" class="btn-submit">Add Category</button>
             </form>
         </section>
 
@@ -161,17 +171,9 @@
                     <input type="text" id="searchInput" placeholder="Search transactions..." class="search-input" />
                     <select id="categoryFilter" class="filter-select">
                         <option value="">All Categories</option>
-                        <option value="Job">Job</option>
-                        <option value="Freelance">Freelance</option>
-                        <option value="Bonus">Bonus</option>
-                        <option value="Groceries">Groceries</option>
-                        <option value="Housing">Housing</option>
-                        <option value="Utilities">Utilities</option>
-                        <option value="Transport">Transport</option>
-                        <option value="Dining Out">Dining Out</option>
-                        <option value="Entertainment">Entertainment</option>
-                        <option value="Shopping">Shopping</option>
-                        <option value="Health">Health</option>
+                        {% for category in category_names %}
+                        <option value="{{ category }}">{{ category }}</option>
+                        {% endfor %}
                     </select>
                 </div>
             </div>
@@ -187,10 +189,10 @@
                     </thead>
                     <tbody id="transactionsBody">
                         {% for transaction in transactions %}
-                        <tr class="transaction-row" data-category="{{ transaction.category }}">
+                        <tr class="transaction-row" data-category="{{ transaction.category_ref.name if transaction.category_ref else 'Uncategorized' }}">
                             <td>{{ transaction.date[:10] }}</td>
                             <td>{{ transaction.description }}</td>
-                            <td><span class="category-badge">{{ transaction.category }}</span></td>
+                            <td><span class="category-badge">{{ transaction.category_ref.name if transaction.category_ref else 'Uncategorized' }}</span></td>
                             <td class="amount {% if transaction.amount > 0 %}amount--positive{% else %}amount--negative{% endif %}">
                                 {% if transaction.amount > 0 %}+{% else %}-{% endif %} R {{ "%.2f"|format(transaction.amount|abs) }}
                             </td>
