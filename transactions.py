@@ -4,8 +4,7 @@ from typing import List, Tuple
 
 # Constants
 CURRENCY_SYMBOL = "R"
-# TODO: Remove the TRANSACTION_TYPES constant below - we are not using it in the Transaction class
-TRANSACTION_TYPES = ["income", "expense"]
+
 
 
 class Transaction:
@@ -22,8 +21,13 @@ class Transaction:
         return f"Transaction(date='{self.date}', description='{self.description}', amount={self.amount}, category='{self.category}')"
 
 
-# TODO: Implement this function to sum all transactions with negative amounts
+
 def calculate_total_expenses(transactions: List[Transaction]) -> Decimal:
+    total = Decimal(0)
+    for transaction in transactions:
+        if transaction.amount < 0:
+            total += transaction.amount
+    return total
     """Calculates the total expenses from a list of transactions.
 
     Args:
@@ -40,11 +44,17 @@ def calculate_total_expenses(transactions: List[Transaction]) -> Decimal:
     return Decimal(0)
 
 
-# TODO: Implement this function to sum all transactions with positive amounts
+
 def calculate_total_income(transactions: List[Transaction]) -> Decimal:
+    total = Decimal(0)
+    for transaction in transactions:
+        if transaction.amount > 0:
+            total += transaction.amount
+    return total
+
     """Calculates the total income from a list of transactions.
     
-    Args:
+    Args:   
         transactions: A list of Transaction objects.
 
     Returns:
@@ -69,7 +79,7 @@ def format_currency(amount: Decimal) -> str:
     """
     return f"{CURRENCY_SYMBOL} {amount:,.2f}"
 
-# TODO: Remove the entire add_transaction function below (no longer needed with Transaction class)
+
 def add_transaction(
     transactions: List[dict], description: str, amount: Decimal, transaction_type: str
 ) -> List[dict]:
@@ -108,10 +118,10 @@ def add_transaction(
     transactions.append(transaction)
     return transactions
 
-# TODO: Update this function to work with Transaction objects instead of dicts.
-# Change List[dict] to List[Transaction], use dot notation (t.amount), and update docstring.
-# Hint: With Transaction objects, simply sum all amounts (expenses are negative, income is positive)!
+
 def calculate_balance(transactions: List[dict]) -> Decimal:
+    balance = calculate_total_income(transactions) + calculate_total_expenses(transactions)
+    return balance
     """
     Calculate the current balance from a list of transactions.
 
@@ -141,7 +151,7 @@ def calculate_balance(transactions: List[dict]) -> Decimal:
 
     return balance
 
-# TODO: Remove the entire get_income_total function below (replaced by calculate_total_income)
+
 def get_income_total(transactions: List[dict]) -> Decimal:
     """
     Calculate the total income from all transactions.
@@ -158,7 +168,7 @@ def get_income_total(transactions: List[dict]) -> Decimal:
             total += item["amount"]
     return total
 
-# TODO: Remove the entire get_expense_total function below (replaced by calculate_total_expenses)
+
 def get_expense_total(transactions: List[dict]) -> Decimal:
     """
     Calculate the total expenses from all transactions.
@@ -175,7 +185,7 @@ def get_expense_total(transactions: List[dict]) -> Decimal:
             total += item["amount"]
     return total
 
-# TODO: Remove the entire check_budget function below (not needed for this tutorial)
+
 def check_budget(balance: Decimal, budget_limit: Decimal) -> Tuple[bool, str]:
     """
     Check if the current balance is within the budget limit.
@@ -202,7 +212,7 @@ def check_budget(balance: Decimal, budget_limit: Decimal) -> Tuple[bool, str]:
         )
         return (True, message)
 
-# TODO: Remove the entire display_transactions function below (not needed for this tutorial)
+
 def display_transactions(transactions: List[dict]) -> None:
     """
     Display all transactions in a formatted table.
@@ -221,20 +231,4 @@ def display_transactions(transactions: List[dict]) -> None:
             f"{format_currency((transaction['amount'])):<15}"
         )
 
-# TODO: Remove the entire if __name__ == "__main__": block below (old example code)
-if __name__ == "__main__":
-    # Example usage
-    transactions = []
-    add_transaction(transactions, "Salary", Decimal("5000"), "income")
-    add_transaction(transactions, "Groceries", Decimal("1500"), "expense")
-    add_transaction(transactions, "Freelance", Decimal("2000"), "income")
-    add_transaction(transactions, "Rent", Decimal("2500"), "expense")
 
-    display_transactions(transactions)
-
-    balance = calculate_balance(transactions)
-    print(f"\nCurrent Balance: {format_currency(balance)}")
-
-    budget_limit = Decimal("3000")
-    within_budget, message = check_budget(balance, budget_limit)
-    print(message)
