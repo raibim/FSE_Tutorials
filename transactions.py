@@ -1,10 +1,8 @@
 from decimal import Decimal, InvalidOperation
 from typing import List, Tuple
 
-
 # Constants
 CURRENCY_SYMBOL = "R"
-
 
 
 class Transaction:
@@ -19,7 +17,6 @@ class Transaction:
 
     def __repr__(self):
         return f"Transaction(date='{self.date}', description='{self.description}', amount={self.amount}, category='{self.category}')"
-
 
 
 def calculate_total_expenses(transactions: List[Transaction]) -> Decimal:
@@ -44,7 +41,6 @@ def calculate_total_expenses(transactions: List[Transaction]) -> Decimal:
     return Decimal(0)
 
 
-
 def calculate_total_income(transactions: List[Transaction]) -> Decimal:
     total = Decimal(0)
     for transaction in transactions:
@@ -61,6 +57,7 @@ def calculate_total_income(transactions: List[Transaction]) -> Decimal:
         The total income as a Decimal (should be positive).
     """
     return Decimal(0)
+
 
 # NOTE: This function is already complete - no changes needed here!
 def format_currency(amount: Decimal) -> str:
@@ -120,7 +117,9 @@ def add_transaction(
 
 
 def calculate_balance(transactions: List[dict]) -> Decimal:
-    balance = calculate_total_income(transactions) + calculate_total_expenses(transactions)
+    balance = calculate_total_income(transactions) + calculate_total_expenses(
+        transactions
+    )
     return balance
     """
     Calculate the current balance from a list of transactions.
@@ -230,5 +229,3 @@ def display_transactions(transactions: List[dict]) -> None:
             f"{transaction['type']:<10} "
             f"{format_currency((transaction['amount'])):<15}"
         )
-
-
