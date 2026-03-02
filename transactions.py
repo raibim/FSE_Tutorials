@@ -83,3 +83,4 @@ def calculate_financial_summary(transactions: list[Transaction]) -> dict:
         "balance": format_currency(balance),
         "financial_health": health,
     }
+#com

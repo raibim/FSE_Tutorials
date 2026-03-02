@@ -16,3 +16,5 @@ class Config:
     @classmethod
     def get_secret_key(cls : type) -> str:
         return cls.SECRET_KEY
+    #com
+    
