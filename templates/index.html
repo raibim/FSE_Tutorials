@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <div class="container">
+        <form method="POST">
+            <h3>Add Contact</h3>
+            <p><input type="text" name="name" placeholder="Name" required /></p>
+            <p><input type="email" name="email" placeholder="Email" required /></p>
+            <p><input type="text" name="phone" placeholder="Phone" required /></p>
+            <button type="submit">Save</button>
+        </form>
+
+        <hr>
+
+        <div>
+            <h3>Contact List</h3>
+            <table border="1">
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                </tr>
+                {% for contact in contacts %}
+                <tr>
+                    <td>{{ contact[1] }}</td> <td>{{ contact[2] }}</td> <td>{{ contact[3] }}</td> </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+</body>
+</html>

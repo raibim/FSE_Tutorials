@@ -20,3 +20,7 @@ env/
 celerybeat-schedule
 
 .env
+venv/
+*.pyc
+__pycache__/
+database.db
