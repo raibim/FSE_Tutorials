@@ -13,7 +13,7 @@ from helpers.analysis import (
 
 app = Flask(__name__)
 app.register_blueprint(customer_bp, url_prefix="/")
-
+#
 
 def main():
     logger.add("logs/app.log", rotation="1 MB")
@@ -29,7 +29,7 @@ def main():
 @app.route("/api/financial_summary", methods=["GET"])
 def api_financial_summary():
     """API endpoint to get the student-facing text report."""
-    return ""
+    return jsonify(generate_text_report())
 
 
 # TODO Complete the API endpoint below to return transactions for a specific category
@@ -40,7 +40,8 @@ def api_transactions_by_category():
     category = request.args.get("category")
     if not category:
         return jsonify({"error": "Category query parameter is required"}), 400
-    return ""
+    transactions = get_transactions_by_category(category)
+    return transactions
 
 
 @app.route("/api/category", methods=["GET"])
