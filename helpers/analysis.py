@@ -245,9 +245,21 @@ def get_all_transactions():
 #TODO Implement the following functions for the new metrics cards in the dashboard
 def get_largest_expense():
     """Fetches the largest single expense (most negative amount)."""
-    pass
+    session = get_session()
+    try:
+        stmt= select(func.min(Transaction.amount)).where(Transaction.amount < 0)
+        largest_expense = session.execute(stmt).scalar()
+        return f"R {abs(largest_expense):.2f}" if largest_expense is not None else "R 0.00"
+    finally:        
+        session.close()
 
 #TODO Implement the following functions for the new metrics cards in the dashboard
 def get_average_transaction_amount():
     """Calculates the average transaction amount using all transactions."""
-    pass
+    session = get_session()
+    try:
+        stmt = select(func.avg(cast(Transaction.amount, Float)))
+        avg_amount = session.execute(stmt).scalar()
+        return f"R {avg_amount:.2f}" if avg_amount is not None else "R 0.00"
+    finally:
+        session.close()
