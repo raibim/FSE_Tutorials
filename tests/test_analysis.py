@@ -97,6 +97,7 @@ def test_generate_text_report_empty_db(db_session):
     except ZeroDivisionError:
         pytest.fail("generate_text_report raised ZeroDivisionError on empty data!")
 
+
 def test_get_transactions_by_category(db_session, sample_transactions):
     """Tests that transactions are correctly filtered by category."""
     from helpers.analysis import get_transactions_by_category

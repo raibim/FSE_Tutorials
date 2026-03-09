@@ -5,7 +5,6 @@ from customer_front.customer import customer_bp
 import logging
 from loguru import logger
 
-
 load_dotenv()
 
 
@@ -41,8 +40,9 @@ class InterceptHandler(logging.Handler):
             frame = frame.f_back
             depth += 1
 
-        logger.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
-
+        logger.opt(depth=depth, exception=record.exc_info).log(
+            level, record.getMessage()
+        )
 
 
 def create_app(name=__name__):
@@ -50,5 +50,5 @@ def create_app(name=__name__):
     app.register_blueprint(customer_bp, url_prefix="/customer")
     app.secret_key = Config.get_secret_key()
     app.logger.handlers = []  # Clear default Flask logger handlers
-    logging.basicConfig(handlers=[InterceptHandler()], level=logging.INFO,force=True)
+    logging.basicConfig(handlers=[InterceptHandler()], level=logging.INFO, force=True)
     return app

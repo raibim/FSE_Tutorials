@@ -111,8 +111,10 @@ def generate_text_report() -> dict:
             "Net Savings": "R 0.00",
         }
     # Ensure amount is numeric and date is datetime
-    df['amount'] = pd.to_numeric(df['amount'])
-    df['date'] = pd.to_datetime(df['date'], format='ISO8601')  # Handle mixed ISO8601 formats
+    df["amount"] = pd.to_numeric(df["amount"])
+    df["date"] = pd.to_datetime(
+        df["date"], format="ISO8601"
+    )  # Handle mixed ISO8601 formats
 
     expenses = df[df["amount"] < 0]
     income = df[df["amount"] > 0]
@@ -177,6 +179,7 @@ def get_transactions_by_category(category_name: str):
     finally:
         session.close()
 
+
 def convert_transactions_to_dict(transactions):
     """Helper function to convert Transaction objects to dictionaries for JSON serialization."""
     return [
@@ -200,7 +203,8 @@ def add_transaction_to_db(date, description, amount, category_name):
         if not category:
             raise ValueError(f"Category '{category_name}' does not exist.")
         new_transaction = Transaction(
-            date=date, description=description, amount=amount, category_id=category.id)
+            date=date, description=description, amount=amount, category_id=category.id
+        )
         session.add(new_transaction)
         session.commit()
     except Exception as e:
@@ -219,7 +223,7 @@ def add_category_to_db(category_name):
         existing_category = session.execute(stmt).scalars().first()
         if existing_category:
             raise ValueError(f"Category '{category_name}' already exists.")
-        
+
         new_category = Category(name=category_name)
         session.add(new_category)
         session.commit()
@@ -235,25 +239,32 @@ def get_all_transactions():
     """Fetches all transactions from the database, including their category names."""
     session = get_session()
     try:
-        stmt = select(Transaction).options(joinedload(Transaction.category_ref)).order_by(Transaction.date.desc())
+        stmt = (
+            select(Transaction)
+            .options(joinedload(Transaction.category_ref))
+            .order_by(Transaction.date.desc())
+        )
         transactions = session.execute(stmt).unique().scalars().all()
         return transactions
     finally:
         session.close()
 
 
-#TODO Implement the following functions for the new metrics cards in the dashboard
+# TODO Implement the following functions for the new metrics cards in the dashboard
 def get_largest_expense():
     """Fetches the largest single expense (most negative amount)."""
     session = get_session()
     try:
-        stmt= select(func.min(Transaction.amount)).where(Transaction.amount < 0)
+        stmt = select(func.min(Transaction.amount)).where(Transaction.amount < 0)
         largest_expense = session.execute(stmt).scalar()
-        return f"R {abs(largest_expense):.2f}" if largest_expense is not None else "R 0.00"
-    finally:        
+        return (
+            f"R {abs(largest_expense):.2f}" if largest_expense is not None else "R 0.00"
+        )
+    finally:
         session.close()
 
-#TODO Implement the following functions for the new metrics cards in the dashboard
+
+# TODO Implement the following functions for the new metrics cards in the dashboard
 def get_average_transaction_amount():
     """Calculates the average transaction amount using all transactions."""
     session = get_session()

@@ -17,9 +17,9 @@ from helpers.analysis import (
 )
 from helpers.config import Config, create_app
 
-
 # FLASK APP SETUP
 app = create_app(__name__)
+
 
 def main():
     logger.add("logs/app.log", rotation="1 MB")
@@ -29,7 +29,9 @@ def main():
     generate_financial_charts()
     logger.info("Financial Report:\n{}", generate_text_report())
 
+
 # FLASK APP
+
 
 @app.route("/")
 def dashboard():
@@ -49,16 +51,16 @@ def dashboard():
     avg_transaction = get_average_transaction_amount()
 
     category_names = get_category_names()
-        
+
     return render_template(
-            'dashboard.html',
-            transactions=transactions,
-            report=report,
-            chart_paths=chart_paths,
-            largest_expense=largest_expense,
-            avg_transaction=avg_transaction,
-            category_names=category_names,
-        )
+        "dashboard.html",
+        transactions=transactions,
+        report=report,
+        chart_paths=chart_paths,
+        largest_expense=largest_expense,
+        avg_transaction=avg_transaction,
+        category_names=category_names,
+    )
 
 
 @app.route("/transaction/add", methods=["POST"])
@@ -66,46 +68,52 @@ def add_transaction():
     """Handle adding a new transaction."""
     try:
         # Extract form data
-        date_str = request.form.get('date')
-        description = request.form.get('description')
-        amount = Decimal(request.form.get('amount', '0'))
-        category = request.form.get('category')
-        transaction_type = request.form.get('transaction_type')
-        
+        date_str = request.form.get("date")
+        description = request.form.get("description")
+        amount = Decimal(request.form.get("amount", "0"))
+        category = request.form.get("category")
+        transaction_type = request.form.get("transaction_type")
+
         # Make amount negative for expenses
-        if transaction_type == 'expense' and amount > 0:
+        if transaction_type == "expense" and amount > 0:
             amount = -amount
-        
-        add_transaction_to_db(date=date_str, description=description, amount=amount, category_name=category)
-        flash('Transaction added successfully!', 'success')
+
+        add_transaction_to_db(
+            date=date_str,
+            description=description,
+            amount=amount,
+            category_name=category,
+        )
+        flash("Transaction added successfully!", "success")
     except Exception as e:
         logger.error(f"Error adding transaction: {e}")
-        flash(f'Error adding transaction: {str(e)}', 'error')
-    
-    return redirect(url_for('dashboard'))
+        flash(f"Error adding transaction: {str(e)}", "error")
+
+    return redirect(url_for("dashboard"))
 
 
 @app.route("/category/add", methods=["POST"])
 def add_category():
     """Handle adding a new category."""
     try:
-        category_name = request.form.get('category_name', '').strip()
-        
+        category_name = request.form.get("category_name", "").strip()
+
         if not category_name:
-            flash('Category name cannot be empty', 'error')
+            flash("Category name cannot be empty", "error")
         else:
             from helpers.analysis import add_category_to_db
+
             add_category_to_db(category_name)
-            flash(f'Category "{category_name}" added successfully!', 'success')
+            flash(f'Category "{category_name}" added successfully!', "success")
     except Exception as e:
         logger.error(f"Error adding category: {e}")
-        flash(f'Error adding category: {str(e)}', 'error')
-    
-    return redirect(url_for('dashboard'))
+        flash(f"Error adding category: {str(e)}", "error")
+
+    return redirect(url_for("dashboard"))
 
 
-    
 # API ENDPOINTS
+
 
 @app.route("/api/financial_summary", methods=["GET"])
 def api_financial_summary():
