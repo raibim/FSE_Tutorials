@@ -264,6 +264,7 @@ def get_largest_expense():
         return largest_expense
     finally:
         session.close()
+        #random comment
 
 
 def get_average_transaction_amount():
