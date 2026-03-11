@@ -61,7 +61,11 @@ def log_transaction_audit_task(transaction_id: int):
     """Celery task to log transaction audit information."""
     session = get_session()
     try:
-        pass
+        transaction = session.query(Transaction).filter_by(id=transaction_id).first()
+        if transaction:
+            log_transaction_audit(transaction)
+        else:
+            logger.error(f"Transaction with ID {transaction_id} not found for audit logging.")
     finally:
         session.close()
 
