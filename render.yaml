@@ -11,6 +11,6 @@ services:
     - key: SECRET_KEY
       generateValue: true
     - key: CURRENCY_SYMBOL
-      value:R
+      value: R
     - key: DATABASE_URL
       value: sqlite:///data/finance.db
